@@ -7,7 +7,7 @@
 !CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 !-----------------------------------------------------------------------
-!Module sort_strategy_module
+!Module strategy_module
 !-----------------------------------------------------------------------
 
 module strategy_module
@@ -55,7 +55,7 @@ end module strategy_module
 
 
 !-----------------------------------------------------------------------
-!Module UserStrategy_module
+!Module context_module
 !-----------------------------------------------------------------------
 module context_module
    use strategy_module
@@ -105,7 +105,7 @@ contains
    end subroutine change_strategy
 
    !-----------------------------------------------------------------------
-   !Subroutine sort
+   !Subroutine execute
    !-----------------------------------------------------------------------
    subroutine  execute(this)
       implicit none
