@@ -7,9 +7,9 @@
 !CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ! Simple example of doubly linked list container (non-generic!)
-! with user defined data
-! gfortran -cpp dl_list_module -o dl_list_module.x
-! ifort -fpp dl_list_module -o dl_list_module.x
+! with user defined data. Tested but can still contain some bugs!
+! gfortran -cpp dl_list_module.f90 -o dl_list_module.x
+! ifort -fpp dl_list_module.f90 -o dl_list_module.x
 
 !-----------------------------------------------------------------------
 !Module data_module
@@ -83,8 +83,6 @@ contains
 
 end module list_data_module
 
-
-
 !-----------------------------------------------------------------------
 !Module list_debug_module
 !-----------------------------------------------------------------------
@@ -96,7 +94,6 @@ module list_debug_module
    logical, parameter :: debug = .false.
 
 end module list_debug_module
-
 
 !-----------------------------------------------------------------------
 !Module dl_list_node_module
@@ -257,7 +254,7 @@ contains
       implicit none
       class(list_node_type), intent(inout) :: this
       type(data_ptr), intent(in) :: data_p
-      if(debug) write(*,*) "get_data"
+      if(debug) write(*,*) "set_data"
       this % data = data_p
    end subroutine list_node_set_data
 
@@ -331,7 +328,6 @@ contains
       if(debug) write(*,*) "get_last"
       get_last => this % tail
    end function list_get_last
-
 
    !-----------------------------------------------------------------------
    !Subroutine get_at ! access node with nindex
@@ -408,6 +404,11 @@ contains
          stop
       endif
 
+      if(nindex <=0) then
+         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
+         stop
+      endif
+
       items_count = this % get_size()
       if(nindex > items_count) then
          write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
@@ -435,9 +436,7 @@ contains
          write(*,*)"List is empty"
          write(*,*)"------------------------------------------------------------"
          return
-      endif
-
-      if (.not. this % is_empty()) then
+      else
          items_count = this % get_size()
          head => this % get_first()
          call head % print()
@@ -469,9 +468,7 @@ contains
 
       if(debug) write(*,*) "delete_all"
 
-      if (this % is_empty()) then
-         return
-      endif
+      if (this % is_empty()) return
 
       items_count = this % get_size()
       curr => this % get_first()
@@ -502,7 +499,7 @@ contains
       if (associated(this % head) .and. associated(this % tail) .and. (this % items_count > 0)) then
          is_empty = .false.
       else
-         is_empty = .true.
+         is_empty = .true. ! or list is broken? TODO: add checks
       endif
    end function list_is_empty
 
@@ -722,9 +719,7 @@ contains
 
       if(debug) write(*,*) "delete_first"
 
-      if (this % is_empty()) then
-         return
-      endif
+      if (this % is_empty()) return
 
       curr => this % get_first()
       next => curr % get_next()
@@ -735,7 +730,6 @@ contains
          call curr % delete_data()
       endif
 
-      deallocate(curr)
       ! update link to prev
       if(associated(next)) then
          call next % set_prev(null())
@@ -743,6 +737,7 @@ contains
          ! what? TODO
       endif
 
+      deallocate(curr)
       this % items_count = this % items_count -1
       ! update head
       this % head => next
@@ -765,9 +760,7 @@ contains
 
       if(debug) write(*,*) "delete_last"
 
-      if (this % is_empty()) then
-         return
-      endif
+      if (this % is_empty()) return
 
       ! just do it in one run
       items_count = this % get_size()
@@ -845,7 +838,7 @@ contains
          else
             call this % delete_last()
          endif
-         return !!!
+         return
       endif
 
       ! all other cases, nindex is between head+1 and tail-1
