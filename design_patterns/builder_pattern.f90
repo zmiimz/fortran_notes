@@ -401,9 +401,9 @@ contains
       ! init product
       select type (builder)
        type is (concrete_builder1)
-         call builder % prod % init(5)
+         call builder % prod % init(size(iparts))
        type is (concrete_builder2)
-         call builder % prod % init(5)
+         call builder % prod % init(size(iparts))
        class default
          stop "  construct: unknown type"
       end select
