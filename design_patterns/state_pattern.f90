@@ -172,5 +172,4 @@ program    test_state_pattern
    do i=1,ni
    call ct % operate()
    enddo
-
 end program test_state_pattern

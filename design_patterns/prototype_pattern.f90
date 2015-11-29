@@ -149,7 +149,6 @@ contains
 
 end module prototype_cache_module
 
-
 !-----------------------------------------------------------------------
 !Module client_module
 !-----------------------------------------------------------------------
@@ -191,7 +190,6 @@ contains
 
 end module client_module
 
-
 !-----------------------------------------------------------------------
 !Main program test_prototype_pattern
 !-----------------------------------------------------------------------
@@ -201,5 +199,4 @@ program    test_prototype_pattern
    type(client) :: c
 
    call c % operate()
-
 end program test_prototype_pattern
