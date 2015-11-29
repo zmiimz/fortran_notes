@@ -15,6 +15,7 @@ Tested with gfortran 5.2.1 and intel ifort 16.0
 * Factory method
 * Builder
 * Prototype
+* Singleton
 * State
 * Strategy
 
