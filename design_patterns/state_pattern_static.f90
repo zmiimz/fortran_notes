@@ -8,7 +8,7 @@
 
 !-----------------------------------------------------------------------
 !This set of modules implements example of state design pattern
-! works with GNU gfortran 5.2.1 and intel ifort 16.0.0
+! works with GNU gfortran 5.2.1 and intel ifort 16.0.0, and nagfor 6.0(Hibiya)
 ! implementation uses static states container and pointers ->
 ! * avoids intensive reallocation
 ! * reduces memory and CPU overhead
@@ -306,8 +306,6 @@ contains
       write(*,*) "  finalise_context"
       ! free memory
       if(associated(this % states_container)) then
-         !       deallocate(this % states_container) ! bug in ifort: A pointer passed to DEALLOCATE points to an object that cannot be deallocated
-         ! workaround?
          deallocate(states_container)
          nullify(this %  states_container)
       endif
