@@ -534,7 +534,6 @@ contains
       type(data_ptr), optional, intent(in) :: data_p
       class(list_node_type), pointer :: new_node
       class(list_node_type), pointer :: curr
-      !       class(list_node_type), pointer :: prev
       class(list_node_type), pointer :: next
       if(debug) write(*,*) "add_last"
       if (this % is_empty()) then
@@ -548,7 +547,7 @@ contains
          this % items_count = 1
       else
          curr => this % get_last()
-         !          prev => curr % get_prev()
+
          next => curr % get_next() ! actually should be null
 
          if(present(data_p)) then
@@ -608,7 +607,6 @@ contains
 
       class(list_node_type), pointer :: new_node
       class(list_node_type), pointer :: curr
-      !       class(list_node_type), pointer :: prev
       class(list_node_type), pointer :: next
       integer :: items_count
       if(debug) write(*,*) "add_after"
@@ -635,7 +633,7 @@ contains
       endif
       ! all other  1<=nindex<items_count
       curr => this % get_at(nindex)
-      !        prev => curr % get_prev()
+
       next => curr % get_next()
 
       if(present(data_p)) then
@@ -691,12 +689,11 @@ contains
       ! all other  1<nindex<=items_count
       curr => this % get_at(nindex)
       prev => curr % get_prev()
-      !        next => curr % get_next()
 
       if(present(data_p)) then
          new_node => list_node(prev, curr, data_p)
       else
-         new_node => list_node(prev, curr % get_next())
+         new_node => list_node(prev, curr)
       endif
 
       ! update links of neighbourhood nodes
