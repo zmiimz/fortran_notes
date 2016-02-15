@@ -12,6 +12,30 @@
 ! ifort -fpp dl_list_module.f90 -o dl_list_module.x
 
 !-----------------------------------------------------------------------
+!Module list_debug_module
+!-----------------------------------------------------------------------
+module list_debug_module
+   !use
+   implicit none
+   private ! all by default
+   public :: debug, error_stop
+   logical, parameter :: debug = .false.
+contains
+   !-----------------------------------------------------------------------
+   !Subroutine error_stop
+   !-----------------------------------------------------------------------
+   subroutine  error_stop(message,line, file)
+      implicit none
+      character(len=*):: message
+      integer, intent(in) :: line
+      character(len=*):: file
+      write(*,*) message
+      write(*,*)"ERROR, program reached the line ",line," in file ",file
+      stop
+   end subroutine error_stop
+end module list_debug_module
+
+!-----------------------------------------------------------------------
 !Module data_module
 !-----------------------------------------------------------------------
 module list_data_module
@@ -24,6 +48,7 @@ module list_data_module
       real :: y
       real :: z
       real, dimension(10) :: a
+
    contains
       procedure, pass :: print => data_type_print
       procedure, pass :: delete => data_type_delete
@@ -47,8 +72,7 @@ contains
       class(data_type), intent(in) :: this
       write(*,*)"------------------------------------------------------------"
       write(*,*) "x = ", this % x
-      write(*,*) "y = ", this % y
-      write(*,*) "z = ", this % z
+      !  TODO: add other fields here
       write(*,*)"------------------------------------------------------------"
    end subroutine data_type_print
 
@@ -58,8 +82,7 @@ contains
    subroutine  data_type_delete(this)
       implicit none
       class(data_type), intent(inout) :: this
-      ! TODO
-      !       deallocate(this)
+      ! TODO if allocated, deallocate(this)
    end subroutine data_type_delete
 
    !-----------------------------------------------------------------------
@@ -77,23 +100,11 @@ contains
    subroutine  data_ptr_delete(this)
       implicit none
       class(data_ptr), intent(inout) :: this
-      call this % p % delete()
+      if(associated(this % p)) call this % p % delete()
       this % p => null()
    end subroutine data_ptr_delete
 
 end module list_data_module
-
-!-----------------------------------------------------------------------
-!Module list_debug_module
-!-----------------------------------------------------------------------
-module list_debug_module
-   !use
-   implicit none
-   private ! all by default
-   public :: debug
-   logical, parameter :: debug = .false.
-
-end module list_debug_module
 
 !-----------------------------------------------------------------------
 !Module dl_list_node_module
@@ -138,32 +149,27 @@ contains
       allocate(list_node)
       if(associated(prev)) then
          call list_node % set_prev(prev)
-         !          list_node % prev => prev
       else
          call list_node % set_prev(null())
-         !          list_node % prev => null()
       endif
 
       if(associated(next)) then
          call list_node % set_next(next)
-         !          list_node % next => next
       else
          call list_node % set_next(null())
-         !          list_node % next => null()
       endif
 
       if(present(data_p)) then
          call list_node % set_data(data_p)
-         !          list_node % data = data_p
       endif
    end function list_node
 
    !-----------------------------------------------------------------------
-   !Subroutine delete_node ! deallocate current node (deep)
+   !Subroutine delete_node ! deallocate current node
    !-----------------------------------------------------------------------
    subroutine  delete_node(this)
       type(list_node_type) :: this
-      if(debug) write(*,*) "delete_node"
+      if(debug) write(*,*) "final: delete_node"
       call this % delete_data()
    end subroutine  delete_node
 
@@ -205,10 +211,10 @@ contains
       class(list_node_type), intent(in) :: this
       class(list_node_type), pointer :: get_next
       if(debug) write(*,*) "get_next"
-      if(.not. associated(this % next)) then
-         get_next => null()
-      else
+      if(associated(this % next)) then
          get_next => this % next
+      else
+         get_next => null()
       endif
    end function list_node_get_next
 
@@ -220,10 +226,10 @@ contains
       class(list_node_type), pointer :: next
       if(debug) write(*,*) "set_next"
 
-      if(.not. associated(next)) then
-         this % next => null()
-      else
+      if(associated(next)) then
          this % next => next
+      else
+         this % next => null()
       endif
    end subroutine list_node_set_next
 
@@ -302,9 +308,19 @@ module dl_list_module
       procedure, pass :: delete_at    => list_delete_at
       procedure, pass :: delete       => list_delete_all
       procedure, pass, private :: set_size     => list_set_size
+      final           :: delete_list
    end type list_type
 
 contains
+
+   !-----------------------------------------------------------------------
+   !Subroutine delete_list ! deallocate list (deep)
+   !-----------------------------------------------------------------------
+   subroutine  delete_list(this)
+      type(list_type) :: this
+      if(debug) write(*,*) "final: delete_list"
+      call this % delete()
+   end subroutine  delete_list
 
    !-----------------------------------------------------------------------
    !Subroutine get_first ! access first node
@@ -342,22 +358,14 @@ contains
 
       if(debug) write(*,*) "get_at"
 
-      if (this % is_empty()) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if (this % is_empty()) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
-      if(nindex <=0) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+
+      if(nindex <=0) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       items_count = this % get_size()
 
-      if(nindex > items_count) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex > items_count) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       if(nindex == 1) then
          get_at => this % get_first()
@@ -399,21 +407,12 @@ contains
 
       if(debug) write(*,*) "set_at"
 
-      if (this % is_empty()) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if (this % is_empty()) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
-      if(nindex <=0) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex <=0) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       items_count = this % get_size()
-      if(nindex > items_count) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex > items_count) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       curr => this % get_at(nindex)
       call curr % set_data (data_p)
@@ -427,8 +426,7 @@ contains
       class(list_type), intent(in) :: this
 
       class(list_node_type), pointer :: curr
-      class(list_node_type), pointer :: head
-      integer :: items_count
+      integer :: items_count, i
       if(debug) write(*,*) "print_all"
 
       if (this % is_empty()) then
@@ -438,19 +436,19 @@ contains
          return
       else
          items_count = this % get_size()
-         head => this % get_first()
-         call head % print()
+         curr => this % get_first()
 
-         if(items_count > 1) then
-            curr => head
-            !       do i = 1, items_count
-            !          curr => curr % get_next()
-            !          call curr % print()
-            !       enddo
-            do while(associated(curr % get_next()))
-               curr => curr % get_next()
+         if(items_count == 1) then
+            call curr % print()
+         else
+            do i = 1, items_count
                call curr % print()
-            end do
+               curr => curr % get_next()
+            enddo
+            !             do while(associated(curr))
+            !                call curr % print()
+            !                curr => curr % get_next()
+            !             end do
          endif
       endif
    end subroutine list_print_all
@@ -464,27 +462,17 @@ contains
 
       class(list_node_type), pointer :: curr
       class(list_node_type), pointer :: next
-      integer :: items_count
-
+      integer :: items_count, i
       if(debug) write(*,*) "delete_all"
 
       if (this % is_empty()) return
 
       items_count = this % get_size()
-      curr => this % get_first()
-      next => curr % get_next()
-      call curr % delete_data()
-      deallocate(curr)
 
-      do while(associated(next))
-         curr => next
-         next => next % get_next()
-         call curr % delete_data()
-         deallocate(curr)
-      end do
+      do i = 1, items_count
+         call this % delete_last()
+      enddo
 
-      this % head => null()
-      this % tail => null()
       call this % set_size(0)
    end subroutine list_delete_all
 
@@ -533,30 +521,34 @@ contains
       class(list_type), intent(inout) :: this
       type(data_ptr), optional, intent(in) :: data_p
       class(list_node_type), pointer :: new_node
-      class(list_node_type), pointer :: curr
+      class(list_node_type), pointer :: prev
       class(list_node_type), pointer :: next
       if(debug) write(*,*) "add_last"
+
+      prev => null()
+      next => null()
+
       if (this % is_empty()) then
          if(present(data_p)) then
-            this % head => list_node(null(), this % head, data_p)
+            this % head => list_node(prev, next, data_p)
          else
-            this % head => list_node(null(),this % head)
+            this % head => list_node(prev,next)
          endif
 
          this % tail => this % head
          this % items_count = 1
-      else
-         curr => this % get_last()
 
-         next => curr % get_next() ! actually should be null
+      else
+         prev => this % get_last()
+         next => null() ! prev % get_next() ! actually should be null
 
          if(present(data_p)) then
-            new_node => list_node(curr, next, data_p)
+            new_node => list_node(prev, next, data_p)
          else
-            new_node => list_node(curr, next)
+            new_node => list_node(prev, next)
          endif
          ! update links of neighbourhood nodes
-         call curr % set_next(new_node)
+         call prev % set_next(new_node)
          this % tail => new_node
          this % items_count = this % items_count  + 1
       end if
@@ -611,17 +603,11 @@ contains
       integer :: items_count
       if(debug) write(*,*) "add_after"
 
-      if(nindex == 0) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex == 0) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       items_count = this % get_size()
 
-      if(nindex>items_count) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex>items_count) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       if(nindex==items_count) then
          if(present(data_p)) then
@@ -661,22 +647,15 @@ contains
       class(list_node_type), pointer :: new_node
       class(list_node_type), pointer :: curr
       class(list_node_type), pointer :: prev
-      !       class(list_node_type), pointer :: next
       integer :: items_count
 
       if(debug) write(*,*) "add_before"
 
-      if(nindex == 0) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex == 0) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       items_count = this % get_size()
 
-      if(nindex>items_count) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex>items_count) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       if(nindex == 1) then
          if(present(data_p)) then
@@ -719,6 +698,7 @@ contains
       if (this % is_empty()) return
 
       curr => this % get_first()
+      if(.not. associated(curr)) call error_stop("Error, program reached the line",__LINE__,__FILE__)
       next => curr % get_next()
 
       if(present(data_p)) then
@@ -730,16 +710,14 @@ contains
       ! update link to prev
       if(associated(next)) then
          call next % set_prev(null())
-      else
-         ! what? TODO
       endif
 
-      deallocate(curr)
-      this % items_count = this % items_count -1
       ! update head
       this % head => next
+      this % items_count = this % items_count -1
       if(this % items_count == 1) this % tail => this % head
       if (.not. associated(this % head) .or. this % items_count == 0) this % tail => null()
+      deallocate(curr)
    end subroutine list_delete_first
 
    !-----------------------------------------------------------------------
@@ -782,14 +760,12 @@ contains
       ! update links of neighbourhood
       if(associated(prev)) then
          call prev%set_next(null())
-      else
-         ! what? TODO
       endif
 
-      deallocate(curr)
-      this % items_count = this % items_count -1
       this % tail => prev
+      this % items_count = this % items_count -1
       if(this % items_count == 1) this % head => this % tail
+      deallocate(curr)
    end subroutine list_delete_last
 
    !-----------------------------------------------------------------------
@@ -808,17 +784,11 @@ contains
 
       if(debug) write(*,*) "delete_at"
 
-      if(nindex == 0) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex == 0) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       items_count = this % get_size()
 
-      if(nindex>items_count) then
-         write(*,*)"Error, program reached the line",__LINE__," in file ",__FILE__
-         stop
-      endif
+      if(nindex>items_count) call error_stop("Error, program reached the line",__LINE__,__FILE__)
 
       if(nindex == 1) then
          if(present(data_p)) then
@@ -869,127 +839,191 @@ program    test_list_random
    use list_data_module, only : data_type, data_ptr
    implicit none
    integer, parameter :: n1 = 5
-   integer, parameter :: n2 = 50000
-   type(data_type), dimension(n1), target :: data
-   type(data_type), dimension(n2), target :: data_big
+   integer, parameter :: nbig = 20000
+   type(data_type), dimension(n1+1), target :: data
+   type(data_type), dimension(nbig), target :: data_big
    type(data_ptr) :: dp
    type(list_type) :: list
+
    integer :: random_pos, nsize
    character(len=1):: dummy
 
    type(list_node_type), pointer ::  np
    integer :: i
+   logical :: is_empty
+   integer :: lsize
+   real :: random
+   real, dimension(2) :: time
 
    call init_random_seed()
-   ! init
-   do i = 1, n1
+   ! init data
+   do i = 1, n1+1
       data(i) % x = i*1.0
-      data(i) % y = i*1.0
-      data(i) % z = i*1.0
-   enddo
-
-   do i = 1, n2
-      data_big(i) % x = i*1.0
-      data_big(i) % y = i*1.0
-      data_big(i) % z = i*1.0
    enddo
 
    ! create list #1
-   write(*,*)"create list #1"
-   dp % p => data(1)
-   call list % add_first(dp)
-   do i = 2, n1
+   write(*,*) "create list #1"
+   do i = n1, 1, -1
       dp % p => data(i)
       call list % add_first(dp)
    enddo
-
+   write(*,*)"print list #1"
    call list % print()
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
-   call list % delete()
+
+   write(*,*)"get_first list #1"
+   np => list % get_first()
+   call np % print()
+
+   write(*,*)"get_last list #1"
+   np => list % get_last()
+   call np % print()
+
+   write(*,*)"get_at(2) list #1"
+   np => list % get_at(2)
+   call np % print()
+
+
+   write(*,*)"set_at(3) = 6 list #1"
+   dp % p => data(6)
+   call list % set_at(3,dp)
+
+
+   np => list % get_at(3)
+   write(*,*)"get_at(3) list #1"
+   call np % print()
+
+   write(*,*)"print list #1"
    call list % print()
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
 
+   write(*,*)"is_empty list #1"
+   is_empty = list % is_empty()
+   write(*,*) is_empty
 
-   ! create list #2
-   write(*,*)"create list #2"
-   dp % p => data(1)
+   write(*,*)"set_at(3) = 3 list #1"
+   dp % p => data(3)
+   call list % set_at(3,dp)
+   dp % p => data(6)
+   write(*,*)"get_size list #1"
+   lsize = list % get_size()
+   write(*,*) lsize
+
+   write(*,*)"add_last list #1"
+   call list % add_last(dp)
+
+   write(*,*)"print list #1"
+   call list % print()
+
+   write(*,*)"add_first list #1"
    call list % add_first(dp)
-   dp % p => data(2)
-   call list % add_before(1, dp)
 
-   do i = 3, n1
-      dp % p => data(i)
-      call list % add_before(1, dp)
-   enddo
+   write(*,*)"print list #1"
+   call list % print()
 
+   write(*,*)"add_after(2) = 6 list #1"
+   call list % add_after(2, dp)
+
+   write(*,*)"print list #1"
    call list % print()
-   call list % delete_first()
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
+
+   write(*,*)"add_before(7) = 6 list #1"
+   call list % add_before(7, dp)
+
+   write(*,*)"print list #1"
    call list % print()
+
+   write(*,*)"delete_at(3) list #1"
+   call list % delete_at(3)
+   write(*,*)"delete_at(6) list #1"
+   call list % delete_at(6)
+
+   write(*,*)"print list #1"
+   call list % print()
+
+   write(*,*)"delete_last() list #1"
    call list % delete_last()
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
-   call list % print()
-   call list % delete_at(2)
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
-   call list % print()
-   dp % p => data(5)
-   call list % set_at(1, dp)
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
-   call list % print()
-   call list % delete()
+
+   write(*,*)"print list #1"
    call list % print()
 
+   write(*,*)"delete_first() list #1"
+   call list % delete_first()
+
+   write(*,*)"print list #1"
+   call list % print()
+
+   write(*,*)"delete() list #1"
+   call list % delete()
+
+   write(*,*)"print list #1"
+   call list % print()
+
+   !-----------------------------------------------------------------------
+   ! init data_big
+   do i = 1, nbig
+      data_big(i) % x = i*1.0
+   enddo
 
    ! create list #3
-   write(*,*)"create big list #3"
-   do i = 1, n2
+   call cpu_time (time(1))
+   write(*,*)"create big list #2"
+   do i = 1, nbig
       dp % p => data_big(i)
       call list % add_last(dp)
    enddo
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
-   nsize = list % get_size()
-   ! random access (delete) performance
-   do while(nsize>0)
-      random_pos = get_random_pos(nsize)
-      !       write(*,*) "nsize = ", nsize, " random_pos = ", random_pos
-      call list % delete_at(random_pos)
-      nsize = list % get_size()
-      !       write(*,*) "is empty = ", list % is_empty()
-      !       write(*,*) "count = ", list % get_size()
-   enddo
+   call cpu_time (time(2))
+   write(*,*) "time = ", time(2)-time(1)
 
+   lsize = list % get_size()
+   ! random access (delete_at) performance
+   write(*,*) "random access (delete_at) performance"
+   call cpu_time (time(1))
+   do while(lsize>0)
+      random_pos = get_random_pos(lsize)
+      call list % delete_at(random_pos)
+      lsize = list % get_size()
+   enddo
+   call cpu_time (time(2))
+   write(*,*) "time = ", time(2)-time(1)
 
    ! create list #4
-   write(*,*)"create big list #4"
-   do i = 1, n2
+   write(*,*)"create big list #3"
+   call cpu_time (time(1))
+   do i = 1, nbig
       dp % p => data_big(i)
       call list % add_last(dp)
    enddo
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
+   call cpu_time (time(2))
+   write(*,*) "time = ", time(2)-time(1)
 
-   nsize = list % get_size()
+   lsize = list % get_size()
    ! random access (delete and insert) performance
-   do i = 1, n2
-      random_pos = get_random_pos(nsize)
+   write(*,*) "random access (delete_at + add_before + add_after) performance"
+   call cpu_time (time(1))
+   do i = 1, nbig
+      random_pos = get_random_pos(lsize)
       call list % delete_at(random_pos)
-      random_pos = get_random_pos(nsize-1)
-      dp % p => data(random_pos+1)
-      call list % add_after(random_pos,dp)
+      random_pos = get_random_pos(lsize-1)
+      dp % p => data_big(random_pos)
+
+      call random_number(random)
+      if(random < 0.5) then
+         call list % add_before(random_pos,dp)
+      else
+         call list % add_after(random_pos,dp)
+      endif
    enddo
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
+   call cpu_time (time(2))
+   write(*,*) "time = ", time(2)-time(1)
+
+   write(*,*) "delete all"
+   call cpu_time (time(1))
    call list % delete()
+   call cpu_time (time(2))
+   write(*,*) "time = ", time(2)-time(1)
+   write(*,*) "print"
    call list % print()
-   write(*,*) "is empty = ", list % is_empty()
-   write(*,*) "count = ", list % get_size()
+
+
 
 contains
    !-----------------------------------------------------------------------
