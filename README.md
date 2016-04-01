@@ -22,3 +22,4 @@ Tested with gfortran 5.2.1 and intel ifort 16.0
 **hash**
 
 * CRC-32, IEEE 802
+* hash functions: elf, bpreiss, apartow (AP), knuth, tmueller, sax, djb, djb2, sdbm, fnv1_32, fnv1a_32, jenkins_oat
