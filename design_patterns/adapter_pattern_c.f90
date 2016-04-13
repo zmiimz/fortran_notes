@@ -8,10 +8,9 @@
 
 !This set of modules implements adapter design pattern based on the well-known uml diagram
 !tested with GNU gfortran 5.3.1 and Intel ifort 16.0
-! Client calls operations of target or adapter instance and adapter calls adaptee operations
-! Adapter (wrapper) makes things work after they're designed, it has publicly the interface
-! of the target type, and privately inherits the implementation of the adaptee type.
-! This kind of adapter pattern is known as an "object adapter pattern"
+! This kind of adapter pattern approximates (partly) a "class adapter pattern"
+! note that there is no multiple inheritance in fortran and we are not allowed
+! to modify target_type nor adaptee_type
 !-----------------------------------------------------------------------
 !Module target_module
 !-----------------------------------------------------------------------
@@ -76,7 +75,8 @@ end module adaptee_module
 
 !-----------------------------------------------------------------------
 !Module adapter_module
-! type contains only pointer on adaptee instance
+! type adapter_type is derived from adaptee and contains procedure pointer
+! component with target method interface
 !-----------------------------------------------------------------------
 module adapter_module
    use target_module
@@ -87,36 +87,26 @@ module adapter_module
 
    ! adapter_type adapts the interface of adaptee to the target interface and
    ! provides the link between the incompatible client and adaptee classes
-   type, extends(target_type) :: adapter_type
+   type, extends(adaptee_type) :: adapter_type
       integer :: two
       integer :: three
       real :: and_something_else
-      class(adaptee_type), private, pointer :: current_adaptee => null() !  instance of the adaptee_type
+      class(target_type), private, pointer :: concrete_target
+      procedure (target_type_procedure), pointer :: request => NULL()
    contains
-      procedure, pass :: request => adapter_request
       procedure, pass :: init => adapter_init
    end type adapter_type
 
+   ! target method interface but for adapter_type
+   interface
+      subroutine target_type_procedure(this, one)
+         import  :: adapter_type
+         class(adapter_type), intent(in) :: this
+         integer, intent(in) :: one
+      end subroutine target_type_procedure
+   end interface
+
 contains
-
-   !-----------------------------------------------------------------------
-   !Subroutine adapter_init
-   ! pass additional info needed for specific_request in adaptee
-   ! we obtain adaptee instance as argument
-   !-----------------------------------------------------------------------
-   subroutine  adapter_init(this, two, three, and_something_else, adaptee)
-      implicit none
-      class(adapter_type), intent(inout) :: this
-      integer, intent(in) :: two, three
-      real, intent(in) :: and_something_else
-      class(adaptee_type), target, intent(in) :: adaptee
-
-      write(*,*) "  adapter_init"
-      this % two = two
-      this % three = three
-      this % and_something_else = and_something_else
-      this % current_adaptee => adaptee
-   end subroutine adapter_init
 
    !-----------------------------------------------------------------------
    !Subroutine adapter_request
@@ -127,11 +117,30 @@ contains
       integer, intent(in) :: one
       logical :: res
       write(*,*) "  adapter_request"
-      if(.not. associated(this % current_adaptee)) stop ".not. associated(this % current_adaptee)"
-      res = this % current_adaptee % specific_request(this % two, this % three, this % and_something_else)
+      if(.not. associated(this % request)) stop ".not. associated(this % request)"
+      res = this % specific_request(this % two, this % three, this % and_something_else)
       write(*,*) "  res = ", res
-
    end subroutine adapter_request
+
+   !-----------------------------------------------------------------------
+   !Subroutine adapter_init
+   ! pass additional info needed for specific_request in adaptee
+   ! we have adaptee interface already
+   !-----------------------------------------------------------------------
+   subroutine  adapter_init(this, two, three, and_something_else, target_object)
+      implicit none
+      class(adapter_type), intent(inout) :: this
+      integer, intent(in) :: two, three
+      real, intent(in) :: and_something_else
+      class(target_type), target, intent(in) :: target_object ! sometimes it is needed in adapter
+      write(*,*) "  adapter_init"
+      this % two = two
+      this % three = three
+      this % and_something_else = and_something_else
+      this % request => adapter_request ! bind target-like method
+      this % concrete_target => target_object
+   end subroutine adapter_init
+
 end module adapter_module
 
 !-----------------------------------------------------------------------
@@ -151,15 +160,25 @@ contains
 
    !-----------------------------------------------------------------------
    !Subroutine client_run
+   !
    !-----------------------------------------------------------------------
    subroutine  client_run(this, object)
       use target_module
+      use adapter_module
       implicit none
       class(client_type), intent(in) :: this
-      class(target_type), intent(in) :: object
+      class(*), intent(in) :: object ! some polymorphic object
       write(*,*) "client_run"
-      call object % request(1)
 
+      ! object has method similar to the target method
+      select type (object)
+       class is (target_type)
+         call object % request(1)
+       class is(adapter_type)
+         call object % request(1)
+       class default
+         stop "unknown object"
+      end select
    end subroutine client_run
 
 end module client_module
@@ -171,17 +190,15 @@ program    test
    use client_module
    use target_module
    use adapter_module
-   use adaptee_module
    implicit none
 
    type(client_type) :: client
    type(target_type) :: t
    type(adapter_type) :: a
-   type(adaptee_type) :: adaptee
 
    call client % run(t)
    write(*,*)"------------------------------------------------------------"
-   call a % init(2, 3, 3.1415, adaptee) ! init adapter
+   call a % init(2, 3, 3.1415,t) ! init adapter
    call client % run(a)
 
 end program test
