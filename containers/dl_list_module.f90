@@ -194,7 +194,7 @@ contains
    subroutine list_node_set_prev(this,prev)
       class(list_node_type), intent(inout) :: this
       class(list_node_type), pointer :: prev
-      if(debug) write(*,*) "set_next"
+      if(debug) write(*,*) "set_prev"
 
       if(.not. associated(prev)) then
          this % prev => null()
@@ -340,7 +340,6 @@ contains
       implicit none
       class(list_type), intent(in) :: this
       class(list_node_type), pointer :: get_last
-      integer :: i, items_count
       if(debug) write(*,*) "get_last"
       get_last => this % tail
    end function list_get_last
@@ -459,9 +458,6 @@ contains
    subroutine  list_delete_all(this)
       implicit none
       class(list_type), intent(inout) :: this
-
-      class(list_node_type), pointer :: curr
-      class(list_node_type), pointer :: next
       integer :: items_count, i
       if(debug) write(*,*) "delete_all"
 
