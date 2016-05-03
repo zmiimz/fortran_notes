@@ -1613,8 +1613,13 @@ contains
    elemental subroutine  clear_deep_rtable_zmi_hashtable(this)
       implicit none
       class(zmi_hashtable_type), intent(inout) :: this
-
-      if(allocated(this % rtable)) then
+      integer :: i, ts
+      
+       if(allocated(this % rtable)) then
+         ts = size(this % rtable)
+         do i = 1, ts
+            call this % rtable(i) % delete()
+         enddo
          deallocate(this % rtable)
       endif
 
