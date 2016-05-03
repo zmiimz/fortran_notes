@@ -6,6 +6,7 @@ Tested with gfortran 5.2.1 and intel ifort 16.0
 **containers**
 
 * Doubly linked list (non-generic)
+* Hashtable
 
 **design_patterns**
 
