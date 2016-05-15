@@ -50,7 +50,6 @@ contains
    impure elemental subroutine  clear_dl_list_node(this)
       implicit none
       class(dl_list_node_type), intent(inout) :: this
-      integer :: size_in_bits
       this % key = 0
       this % val = 0
       this % next => null()
@@ -227,10 +226,7 @@ contains
       class(dl_list_type), intent(inout) :: this ! LHS
       type(dl_list_type), intent(inout) :: rhs ! RHS
 
-      type(dl_list_node_type), pointer :: node_rhs, node
-      integer :: key
-      integer :: val
-      integer :: this_size, rhs_size, i
+      integer :: this_size, rhs_size
 
       if(rhs % is_empty()) then
          call this % delete() ! clear
@@ -579,7 +575,6 @@ contains
       integer, intent(out) :: val
       integer, intent(out) :: nindex
 
-      integer :: ind
       integer :: items_count
       integer :: i
       type(dl_list_node_type), pointer :: node
@@ -1094,7 +1089,6 @@ contains
          write(*,format_logic) "first = ", this % first
          write(*,format_int) "n = ", this % n
 
-
          do i = 1, this % n
             write(*,format_logic) "associated(this % functions("//int2char(i)//") = ", associated(this % functions(i) % f)
             write(*,format_str) "this % names("//int2char(i)//") = ", this % names(i)
@@ -1484,7 +1478,7 @@ contains
          endif
          this % load_factor = this % ne / real(this % ne_max , dp)
       endif
-      
+
    end subroutine remove_key_in_zmi_hashtable
 
    !-----------------------------------------------------------------------
@@ -1509,7 +1503,6 @@ contains
       logical, optional, intent(in) :: print_table
       integer :: i
       character(len=*), parameter :: format_int = "(A60,I16)"
-      character(len=*), parameter :: format_2int = "(A60,2I16)"
       character(len=*), parameter :: format_real = "(A60,E24.16)"
       character(len=*), parameter :: format_str = "(A60,A)"
       character(len=*), parameter :: format_logic = "(A60,L2)"
@@ -1614,8 +1607,8 @@ contains
       implicit none
       class(zmi_hashtable_type), intent(inout) :: this
       integer :: i, ts
-      
-       if(allocated(this % rtable)) then
+
+      if(allocated(this % rtable)) then
          ts = size(this % rtable)
          do i = 1, ts
             call this % rtable(i) % delete()
@@ -1682,7 +1675,7 @@ contains
    end subroutine finalise_zmi_hashtable
 
    !-----------------------------------------------------------------------
-   !Subroutine resize_zmi_hashtable - expand table, 
+   !Subroutine resize_zmi_hashtable - expand table,
    ! TODO: make it more efficient
    ! TODO: add shrink functionality
    !-----------------------------------------------------------------------
@@ -1701,7 +1694,7 @@ contains
       integer :: i,j, ts
       real(dp), parameter :: LOAD_FACTOR_MAX = 0.75_dp ! LOAD_FACTOR_MAX  ad hoc, TODO: optimize it
       real(dp), parameter :: NC_MEAN_FACTOR_MAX = 1.0_dp ! ad hoc, TODO: optimize it
-!             real(dp), parameter :: FB =(1.0_dp+sqrt(5.0_dp))/2.0_dp  ! 1.6180339887498948482045868343656381177203091798057628621_dp
+      !             real(dp), parameter :: FB =(1.0_dp+sqrt(5.0_dp))/2.0_dp  ! 1.6180339887498948482045868343656381177203091798057628621_dp
       real(dp), parameter :: FB = 2.0_dp ! ad hoc, TODO: optimize it
 
       !       if(this % load_factor > LOAD_FACTOR_MAX) then ! do resize hash
@@ -1917,10 +1910,10 @@ contains
       allocate(ht)
       allocate(keys(hsize))
       call ht % init(ind, hsize)
-!       call ht % init(ind) ! default capacity + rehashing   <============= change here to RESIZE
+      !       call ht % init(ind) ! default capacity + rehashing   <============= change here to RESIZE
       call timer % stop()
       write(*,*) "init time = ", timer % elapsed_time()
-      write(*,*) allocated(ht), "storage_size approx ", ht % get_storage_size()/(8.*1024.*1024.), "Mb"
+      write(*,*) allocated(ht), "storage_size approx ", real(ht % get_storage_size())/(8.*1024.*1024.), "Mb"
 
 
       call timer % init()
@@ -1941,7 +1934,7 @@ contains
       enddo
       call timer % stop()
       write(*,*) "insert time = ", timer % elapsed_time()
-      write(*,*) allocated(ht), "storage_size approx ", ht % get_storage_size()/(8.*1024.*1024.), "Mb"
+      write(*,*) allocated(ht), "storage_size approx ", real(ht % get_storage_size())/(8.*1024.*1024.), "Mb"
       !       call ht % print()
 
       call timer % init()
@@ -1971,13 +1964,13 @@ contains
       !       call ht % print()
 
       if(allocated(keys)) deallocate(keys)
-      
+
       call timer % init()
       call timer % start()
       call ht % clear_deep()
       call timer % stop()
       write(*,*) "clear_deep time = ", timer % elapsed_time()
-      !       call ht % print()      
+      !       call ht % print()
       if(allocated(ht)) deallocate(ht)
    end subroutine test_delete_random_with_reheash
 
@@ -2032,7 +2025,7 @@ contains
 
       do j=num,2,-1
          call random_number(randn)
-         k = floor(j*randn) + 1 
+         k = floor(j*randn) + 1
          ! exchange p(k) and p(j)
          temp = random_permutation(k)
          random_permutation(k) = random_permutation(j)
