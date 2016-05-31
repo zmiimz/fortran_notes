@@ -1517,9 +1517,9 @@ contains
       write(*,format_real) "load_factor = ", this % load_factor
       write(*,format_int) "hf_index = ", this % hf_index
       write(*,format_logic) "associated(hf_pointer) = ", associated(this % hf_pointer)
-      write(*,format_str) "hf_name = ", this % hf_container % names(this % hf_index)
-      call this % hf_container % print()
-
+      if(.not. this % first) write(*,format_str) "hf_name = ", this % hf_container % names(this % hf_index)
+      if(.not. this % first) call this % hf_container % print()
+      
       if(present(print_table)) then
          if(print_table) then
             do i = 1, this % ne_max
