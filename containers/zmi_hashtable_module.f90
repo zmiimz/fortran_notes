@@ -6,7 +6,7 @@
 !IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 !CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-! Smple implementation of hashtable with doubly linked list container (non-generic!)
+! Simple implementation of hashtable with doubly linked list container (non-generic!)
 ! Tested but can still contain some bugs!
 
 !-----------------------------------------------------------------------
@@ -353,10 +353,7 @@ contains
       else
          items_count = this % get_size()
          node => this % get_first()
-         do i = 1, items_count
-            size_in_bits = size_in_bits + node % get_storage_size()
-            node => node % get_next()
-         enddo
+         size_in_bits = size_in_bits + items_count * node % get_storage_size()
       endif
 
    end function get_storage_size_dl_list
@@ -1545,10 +1542,13 @@ contains
 
       size_in_bits = storage_size(this)
       do i = 1, this % ne_max
-         size_in_bits = size_in_bits + storage_size(this % table(i) % get_storage_size()) + &
-         storage_size(this % table(i))
+         size_in_bits = size_in_bits + this % table(i) % get_storage_size()
       enddo
-
+      if(allocated(this % rtable)) then
+         do i = 1, size(this % rtable)
+            size_in_bits = size_in_bits + this % rtable(i) % get_storage_size()
+         enddo
+      endif
    end function get_storage_size_zmi_hashtable
 
    !-----------------------------------------------------------------------
