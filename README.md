@@ -7,6 +7,7 @@ Tested with gfortran 5.2.1 and intel ifort 16.0
 
 * Doubly linked list (non-generic)
 * Hashtable
+* Red-black tree
 
 **design_patterns**
 
