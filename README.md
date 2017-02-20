@@ -1,7 +1,7 @@
 # fortran_notes #
 
 Collection of simple and hopefully useful snippets in modern Fortran 2008.
-Tested with gfortran 5.2.1 and intel ifort 16.0
+Tested with gfortran 6.3 and intel ifort 17.0.0
 
 **containers and advanced data structures**
 
@@ -9,7 +9,7 @@ Tested with gfortran 5.2.1 and intel ifort 16.0
 * Hashtable
 * Red-black tree
 
-**design_patterns**
+**design patterns**
 
   This set of modules implements design patterns from the well-known uml diagrams (described in GoF book etc).
 
