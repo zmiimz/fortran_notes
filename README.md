@@ -3,7 +3,7 @@
 Collection of simple and hopefully useful snippets in modern Fortran 2008.
 Tested with gfortran 5.2.1 and intel ifort 16.0
 
-**containers**
+**containers and advanced data structures**
 
 * Doubly linked list (non-generic)
 * Hashtable
@@ -22,7 +22,7 @@ Tested with gfortran 5.2.1 and intel ifort 16.0
 * Strategy
 * Adapter
 
-**hash**
+**hash functions**
 
 * CRC-32, IEEE 802
 * hash functions: elf, bpreiss, apartow (AP), knuth, tmueller, sax, djb, djb2, sdbm, fnv1_32, fnv1a_32, jenkins_oat
