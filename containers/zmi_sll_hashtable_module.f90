@@ -929,19 +929,19 @@ module zmi_hash_functions_hf_container_module
       integer :: n = 12
       type(zmi_hashfunc_pointer_type), dimension(:), allocatable :: functions
       character(len=16),dimension(12) :: names = [&
-      "elf_hash        ", &
-      "jenkins_oat_hash", &
-      "apartow_hash    ", &
-      "knuth_hash      ", &
-      "tmueller_hash   ", &
-      "sax_hash        ", &
-      "djbx_hash       ", &
-      "djb_hash        ", &
-      "djb2_hash       ", &
-      "sdbm_hash       ", &
-      "fnv1_32_hash    ", &
-      "fnv1a_32_hash   "&
-      ]
+         "elf_hash        ", &
+         "jenkins_oat_hash", &
+         "apartow_hash    ", &
+         "knuth_hash      ", &
+         "tmueller_hash   ", &
+         "sax_hash        ", &
+         "djbx_hash       ", &
+         "djb_hash        ", &
+         "djb2_hash       ", &
+         "sdbm_hash       ", &
+         "fnv1_32_hash    ", &
+         "fnv1a_32_hash   "&
+         ]
    contains
       procedure, pass :: init => init_zmi_hashfunc_hf_container
       procedure, pass :: print => print_zmi_hashfunc_hf_container
@@ -1064,12 +1064,10 @@ module zmi_hashtable_module
       procedure, pass, private :: clear_table => clear_table_zmi_hashtable
       procedure, pass, private :: resize => resize_zmi_hashtable
       procedure, pass, private :: set_capacity => set_capacity_zmi_hashtable
+      procedure, pass :: export_all => export_all_zmi_hashtable
       !TODO:
       !       procedure, pass :: clone ! shallow copy, no keys and values are copied
       !       procedure, pass :: contains_value
-      !       procedure, pass :: export_keys
-      !       procedure, pass :: export_values
-      !       procedure, pass :: export_all
       !       procedure, pass :: get_hashfunc
 
       final :: finalise_zmi_hashtable
@@ -1201,10 +1199,10 @@ contains
 
       ! http://planetmath.org/goodhashtableprimes
       integer, dimension(td),parameter :: prime_numbers_a = [3,7,13,31,53,97,193,389,769,1543,3079,6151,12289,24593,49157,98317,&
-      196613,393241,786433,1572869,3145739,6291469,12582917,25165843,50331653,100663319,201326611,402653189,805306457,1610612741] !,3221225479]
+         196613,393241,786433,1572869,3145739,6291469,12582917,25165843,50331653,100663319,201326611,402653189,805306457,1610612741] !,3221225479]
       ! Robert Sedgewick, Kevin Wayne) Algorithms part 1 (ISBN 0133798690)(531s)
       integer, dimension(td),parameter :: prime_numbers_b = [3,7,13,31,61,127,251,509,1021,2039,4093,8191,16381,32749,65521,131071,&
-      262139,524287,1048573,2097143,4194301,8388593,16777213,33554393,67108859,134217689,268435399,536870909,1073741789,2147483647] !, 4294967291 ]
+       262139,524287,1048573,2097143,4194301,8388593,16777213,33554393,67108859,134217689,268435399,536870909,1073741789,2147483647] !, 4294967291 ]
 
       if(number <= 0) stop "get_predefined_prime_number error"
       if(number > ranges(td))  stop "get_predefined_prime_number error"
@@ -1479,10 +1477,6 @@ contains
       integer :: i, ts
 
       if(allocated(this % table)) then
-         ts = size(this % table)
-         do i = 1, ts
-            call this % table(i) % delete()
-         enddo
          deallocate(this % table)
       endif
 
@@ -1615,10 +1609,28 @@ contains
       real(dp), parameter :: NC_MEAN_FACTOR_MAX = 1.0_dp ! ad hoc, TODO: optimize it
       !             real(dp), parameter :: FB =(1.0_dp+sqrt(5.0_dp))/2.0_dp  ! 1.6180339887498948482045868343656381177203091798057628621_dp
       real(dp), parameter :: FB = 2.0_dp ! ad hoc, TODO: optimize it
+      integer :: method_index ! NC_MEAN_FACTOR_MAX, 1 = LOAD_FACTOR_MAX
+      logical :: do_rehash
 
-      !       if(this % load_factor > LOAD_FACTOR_MAX) then ! do resize hash
-      if(this % nc_mean > NC_MEAN_FACTOR_MAX) then ! do resize hash
-         write(*,*) "rehashing ...", this % load_factor, this % nc_max, this % nc_mean
+      method_index = 0
+      do_rehash = .false.
+
+      select case (method_index)
+       case (0)
+         if(this % nc_mean > NC_MEAN_FACTOR_MAX) then ! using mean of collision 
+            do_rehash = .true.
+         endif
+       case (1)
+         if(this % load_factor > LOAD_FACTOR_MAX) then ! using load factor
+            do_rehash = .true.
+         endif
+       case default
+         error stop "resize_zmi_hashtable: unknown method_index to start resize"
+      end select
+
+
+      if(do_rehash) then ! do resize hash
+         write(*,*) "rehashing: ", " load_factor ", this % load_factor, " nc_max ", this % nc_max, " nc_mean ", this % nc_mean
          new_ne = 0
          new_nc_max = 0
          new_nc_mean = 0.0_dp
@@ -1699,6 +1711,37 @@ contains
       logical :: answer
       call this % search(key, val, nindex, answer)
    end function contains_key_zmi_hashtable
+
+!-----------------------------------------------------------------------
+!Function  export_all_zmi_hashtable
+!-----------------------------------------------------------------------
+   subroutine  export_all_zmi_hashtable(this, keys, values)
+      implicit none
+      class(zmi_hashtable_type), intent(in) :: this
+      integer, allocatable, dimension(:), intent(inout) :: keys, values
+      integer :: depth, last, i
+
+      last = 0;
+
+      if(allocated(keys)) deallocate(keys)
+      if(allocated(values)) deallocate(values)
+
+      if(this % ne > 0) then
+         allocate(keys(this % ne))
+         allocate(values(this % ne))
+      else
+         return  ! table is empty
+      endif
+
+      do i = 1, this % ne_max
+         depth = this % table(i) % get_size()
+         if(depth > 0) then ! list is not empty
+            call this % table(i) % export(keys(last+1:last+depth), values(last+1:last+depth))
+            last = last + depth
+         endif
+      enddo
+   end subroutine export_all_zmi_hashtable
+
 
 end module zmi_hashtable_module
 
@@ -1791,6 +1834,7 @@ program    test_zmi_hashtable
    use, intrinsic :: iso_fortran_env
    use, intrinsic :: iso_c_binding
    use zmi_hashtable_module
+   use zmi_hash_functions_hf_container_module
    use timer_module
    implicit none
 
@@ -1798,22 +1842,35 @@ program    test_zmi_hashtable
    integer, parameter :: dp = selected_real_kind(2*precision(1.0))
    integer, parameter :: hsize = 10000000
    type(timer_type) :: timer
+   real(dp) :: t_min, t_sum
+   integer :: k_min
+   type(zmi_hashfunc_hf_container_type) :: hk
+   
+   t_min = 1e10
+   k_min = 0
 
    do k = 1, 12
-      call test_delete_random_with_reheash(k)
+      call test_delete_random_with_reheash(k, t_sum)
+      if(t_sum < t_min) then
+      t_min = t_sum
+      k_min = k
+      endif
       write(*,*) "-----------------------------------------------------------------------"
    enddo
+   
+   write(*,*) " the winner hash is : ", hk % names(k_min)
 
 contains
 
    !-----------------------------------------------------------------------
    !Subroutine test_delete_random_with_reheash
    !-----------------------------------------------------------------------
-   subroutine  test_delete_random_with_reheash(ind)
+   subroutine  test_delete_random_with_reheash(ind, t)
       implicit none
       integer, intent(in) :: ind
+      real(dp), intent(out) :: t      
       integer :: i
-      integer, dimension(:), allocatable :: keys
+      integer, dimension(:), allocatable :: keys, keys_export, values_export
       integer :: val
       logical :: found
       logical :: deleted
@@ -1821,9 +1878,10 @@ contains
       type(zmi_hashtable_type), allocatable :: ht
       logical :: pt = .true.
 
+
       write(*,*) "test_delete_random_with_reheash"
       val = 0
-
+      t = 0.0_dp
       call init_random_seed()
 
       call timer % init()
@@ -1831,11 +1889,11 @@ contains
       allocate(ht)
       allocate(keys(hsize))
       call ht % init(ind, hsize)
-      !             call ht % init(ind) ! default capacity + rehashing   <============= change here to RESIZE
+      ! call ht % init(ind) ! default capacity + rehashing   <============= change here to RESIZE
       call timer % stop()
       write(*,*) "init time = ", timer % elapsed_time()
       write(*,*) allocated(ht), "storage_size approx ", real(ht % get_storage_size())/(8.*1024.*1024.), "Mb"
-
+      t = t + timer % elapsed_time()
 
       call timer % init()
       call timer % start()
@@ -1846,7 +1904,7 @@ contains
       call shuffle_integer_array(keys)
       call timer % stop()
       write(*,*) "random_permutations time = ", timer % elapsed_time()
-
+      t = t + timer % elapsed_time()
 
       call timer % init()
       call timer % start()
@@ -1857,7 +1915,21 @@ contains
       write(*,*) "insert time = ", timer % elapsed_time()
       write(*,*) allocated(ht), "storage_size approx ", real(ht % get_storage_size())/(8.*1024.*1024.), "Mb"
       !             call ht % print(pt)
-
+      t = t + timer % elapsed_time()
+      
+      
+      call timer % init()
+      call timer % start()
+      call ht % export_all(keys_export, values_export)
+      if( (size(keys_export) /= hsize) .or. (size(values_export) /= hsize)) stop "size inconsistancy"
+      call timer % stop()
+      do i = 1, hsize
+         if(keys_export(i) /= values_export(i)) stop "corresponding values and keys should be equal now" ! values = keys
+      enddo
+      write(*,*) "export time = ", timer % elapsed_time()
+      t = t + timer % elapsed_time()
+      
+      
       call timer % init()
       call timer % start()
       do i = 1, hsize
@@ -1870,7 +1942,9 @@ contains
       call timer % stop()
       write(*,*) "search time = ", timer % elapsed_time()
       !             call ht % print(pt)
-
+      t = t + timer % elapsed_time()
+      
+      
       call timer % init()
       call timer % start()
       do i = 1, hsize
@@ -1882,7 +1956,9 @@ contains
       call timer % stop()
       write(*,*) "delete time = ", timer % elapsed_time()
       !             call ht % print(pt)
-
+      t = t + timer % elapsed_time()
+      
+      
       if(allocated(keys)) deallocate(keys)
 
       call timer % init()
@@ -1891,6 +1967,8 @@ contains
       call timer % stop()
       write(*,*) "clear_deep time = ", timer % elapsed_time()
       !             call ht % print(pt)
+      t = t + timer % elapsed_time()
+      
       if(allocated(ht)) deallocate(ht)
    end subroutine test_delete_random_with_reheash
 
