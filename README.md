@@ -21,6 +21,7 @@ Tested with gfortran 6.3 and intel ifort 17.0.0
 * State
 * Strategy
 * Adapter
+* Bridge
 
 **hash functions**
 
