@@ -11,16 +11,92 @@
 ! gfortran -cpp dl_list_module.f90 -o dl_list_module.x
 ! ifort -fpp dl_list_module.f90 -o dl_list_module.x
 
+
 !-----------------------------------------------------------------------
-!Module list_debug_module
+!Module dl_list_m
 !-----------------------------------------------------------------------
-module list_debug_module
-   !use
+module dl_list_m
    implicit none
    private ! all by default
-   public :: debug, error_stop
+   public :: list_t, list_node_t, abstract_data_t, data_ptr
+   
+   ! debug
    logical, parameter :: debug = .false.
-contains
+   
+   type, abstract :: abstract_data_t
+    !
+    contains
+    procedure (abstract_data_t_print), deferred, pass :: print
+    procedure (abstract_data_t_delete), deferred, pass :: delete
+   end type abstract_data_t
+
+   abstract interface
+    subroutine abstract_data_t_print(this)
+    import  :: abstract_data_t
+    class(abstract_data_t), intent(in) :: this
+    end subroutine abstract_data_t_print
+    
+    subroutine abstract_data_t_delete(this)
+    import  :: abstract_data_t
+    class(abstract_data_t), intent(inout) :: this
+    end subroutine abstract_data_t_delete    
+    end interface
+
+   ! Container for storing data_t pointers
+   type :: data_ptr
+      class(abstract_data_t), pointer :: p
+   contains
+      procedure, pass :: print => data_ptr_print
+      procedure, pass :: delete => data_ptr_delete
+   end type data_ptr    
+   
+   ! node type of the list
+   type list_node_t
+      private
+      type(data_ptr) :: data
+      class(list_node_t), pointer :: next => null()
+      class(list_node_t), pointer :: prev => null()
+   contains
+      procedure, pass :: get_data => list_node_get_data
+      procedure, pass :: set_data => list_node_set_data
+      procedure, pass :: get_next => list_node_get_next
+      procedure, pass :: set_next => list_node_set_next
+      procedure, pass :: get_prev => list_node_get_prev
+      procedure, pass :: set_prev => list_node_set_prev
+      procedure, pass :: print => list_node_print_data
+      procedure, pass :: delete_data => list_node_delete_data
+      final           :: list_node_delete_node
+   end type list_node_t  
+
+   ! list type
+   type list_t
+      private
+      class(list_node_t), pointer :: head => null()
+      class(list_node_t), pointer :: tail => null()
+      integer :: items_count
+   contains
+      procedure, pass :: print        => list_print_all
+      procedure, pass :: get_first    => list_get_first
+      procedure, pass :: get_last     => list_get_last
+      procedure, pass :: get_at       => list_get_at
+      procedure, pass :: set_at       => list_set_at
+      procedure, pass :: is_empty     => list_is_empty
+      procedure, pass :: get_size     => list_get_size
+      procedure, pass :: add_last     => list_add_last
+      procedure, pass :: add_first    => list_add_first
+      procedure, pass :: add_after    => list_add_after
+      procedure, pass :: add_before   => list_add_before
+      procedure, pass :: delete_last  => list_delete_last
+      procedure, pass :: delete_first => list_delete_first
+      procedure, pass :: delete_at    => list_delete_at
+      procedure, pass :: delete       => list_delete_all
+      procedure, pass, private :: set_size => list_set_size
+      final           :: list_delete_list
+   end type list_t
+
+ contains
+ 
+ 
    !-----------------------------------------------------------------------
    !Subroutine error_stop
    !-----------------------------------------------------------------------
@@ -32,59 +108,9 @@ contains
       write(*,*) message
       write(*,*)"ERROR, program reached the line ",line," in file ",file
       stop
-   end subroutine error_stop
-end module list_debug_module
-
-!-----------------------------------------------------------------------
-!Module data_module
-!-----------------------------------------------------------------------
-module list_data_module
-   implicit none
-   private ! all by default
-   public :: data_type, data_ptr
-
-   type data_type
-      real :: x
-      real :: y
-      real :: z
-      real, dimension(10) :: a
-
-   contains
-      procedure, pass :: print => data_type_print
-      procedure, pass :: delete => data_type_delete
-   end type data_type
-
-   ! Container for storing data_t pointers
-   type :: data_ptr
-      type(data_type), pointer :: p
-   contains
-      procedure, pass :: print => data_ptr_print
-      procedure, pass :: delete => data_ptr_delete
-   end type data_ptr
-
-contains
-
-   !-----------------------------------------------------------------------
-   !Subroutine
-   !-----------------------------------------------------------------------
-   subroutine  data_type_print(this)
-      implicit none
-      class(data_type), intent(in) :: this
-      write(*,*)"------------------------------------------------------------"
-      write(*,*) "x = ", this % x
-      !  TODO: add other fields here
-      write(*,*)"------------------------------------------------------------"
-   end subroutine data_type_print
-
-   !-----------------------------------------------------------------------
-   !Subroutine
-   !-----------------------------------------------------------------------
-   subroutine  data_type_delete(this)
-      implicit none
-      class(data_type), intent(inout) :: this
-      ! TODO if allocated, deallocate(this)
-   end subroutine data_type_delete
-
+   end subroutine error_stop 
+ 
+ 
    !-----------------------------------------------------------------------
    !Subroutine
    !-----------------------------------------------------------------------
@@ -103,36 +129,12 @@ contains
       if(associated(this % p)) call this % p % delete()
       this % p => null()
    end subroutine data_ptr_delete
-
-end module list_data_module
-
-!-----------------------------------------------------------------------
-!Module dl_list_node_module
-!-----------------------------------------------------------------------
-module dl_list_node_module
-   use list_data_module, only : data_type, data_ptr
-   use list_debug_module
-   implicit none
-   private ! all by default
-   public :: list_node_type, list_node
-
-   type list_node_type
-      private
-      type(data_ptr) :: data
-      class(list_node_type), pointer :: next => null()
-      class(list_node_type), pointer :: prev => null()
-   contains
-      procedure, pass :: get_data => list_node_get_data
-      procedure, pass :: set_data => list_node_set_data
-      procedure, pass :: get_next => list_node_get_next
-      procedure, pass :: set_next => list_node_set_next
-      procedure, pass :: get_prev => list_node_get_prev
-      procedure, pass :: set_prev => list_node_set_prev
-      procedure, pass :: print => list_node_print_data
-      procedure, pass :: delete_data => list_node_delete_data
-      final           :: delete_node
-   end type list_node_type
-contains
+ 
+ 
+ 
+!==================================================================================================================================
+! list_node part
+  
 
    !-----------------------------------------------------------------------
    !Subroutine list_node constructor
@@ -140,10 +142,10 @@ contains
    !-----------------------------------------------------------------------
    function  list_node(prev, next, data_p)
       implicit none
-      class(list_node_type), pointer :: prev
-      class(list_node_type), pointer :: next
+      class(list_node_t), pointer :: prev
+      class(list_node_t), pointer :: next
       type(data_ptr), intent(in), optional :: data_p
-      class(list_node_type), pointer :: list_node
+      class(list_node_t), pointer :: list_node
       if(debug) write(*,*) "list_node"
 
       allocate(list_node)
@@ -165,21 +167,21 @@ contains
    end function list_node
 
    !-----------------------------------------------------------------------
-   !Subroutine delete_node ! deallocate current node
+   !Subroutine list_node_delete_node ! deallocate current node
    !-----------------------------------------------------------------------
-   subroutine  delete_node(this)
-      type(list_node_type) :: this
+   subroutine  list_node_delete_node(this)
+      type(list_node_t) :: this
       if(debug) write(*,*) "final: delete_node"
       call this % delete_data()
-   end subroutine  delete_node
+   end subroutine  list_node_delete_node
 
    !-----------------------------------------------------------------------
    !Function get_prev ! access prev node
    !-----------------------------------------------------------------------
    function  list_node_get_prev(this) result(get_prev)
       implicit none
-      class(list_node_type), intent(in) :: this
-      class(list_node_type), pointer :: get_prev
+      class(list_node_t), intent(in) :: this
+      class(list_node_t), pointer :: get_prev
       if(debug) write(*,*) "get_prev"
       if(.not. associated(this % prev)) then
          get_prev => null()
@@ -192,8 +194,8 @@ contains
    !Subroutine set_prev ! set prev node
    !-----------------------------------------------------------------------
    subroutine list_node_set_prev(this,prev)
-      class(list_node_type), intent(inout) :: this
-      class(list_node_type), pointer :: prev
+      class(list_node_t), intent(inout) :: this
+      class(list_node_t), pointer :: prev
       if(debug) write(*,*) "set_prev"
 
       if(.not. associated(prev)) then
@@ -208,8 +210,8 @@ contains
    !-----------------------------------------------------------------------
    function  list_node_get_next(this) result(get_next)
       implicit none
-      class(list_node_type), intent(in) :: this
-      class(list_node_type), pointer :: get_next
+      class(list_node_t), intent(in) :: this
+      class(list_node_t), pointer :: get_next
       if(debug) write(*,*) "get_next"
       if(associated(this % next)) then
          get_next => this % next
@@ -222,8 +224,8 @@ contains
    !Subroutine set_next ! set next node
    !-----------------------------------------------------------------------
    subroutine list_node_set_next(this,next)
-      class(list_node_type), intent(inout) :: this
-      class(list_node_type), pointer :: next
+      class(list_node_t), intent(inout) :: this
+      class(list_node_t), pointer :: next
       if(debug) write(*,*) "set_next"
 
       if(associated(next)) then
@@ -237,7 +239,7 @@ contains
    !Subroutine print_data ! print data of current node
    !-----------------------------------------------------------------------
    subroutine list_node_print_data(this)
-      class(list_node_type), intent(in) :: this
+      class(list_node_t), intent(in) :: this
       if(debug) write(*,*) "print_data"
       call this % data % print()
    end subroutine list_node_print_data
@@ -247,7 +249,7 @@ contains
    !-----------------------------------------------------------------------
    function  list_node_get_data(this) result(get_data)
       implicit none
-      class(list_node_type), intent(in) :: this
+      class(list_node_t), intent(in) :: this
       type(data_ptr) :: get_data
       if(debug) write(*,*) "get_data"
       get_data = this % data
@@ -258,7 +260,7 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_node_set_data(this, data_p)
       implicit none
-      class(list_node_type), intent(inout) :: this
+      class(list_node_t), intent(inout) :: this
       type(data_ptr), intent(in) :: data_p
       if(debug) write(*,*) "set_data"
       this % data = data_p
@@ -268,67 +270,36 @@ contains
    !Subroutine delete_data ! deallocate data of current node (deep)
    !-----------------------------------------------------------------------
    subroutine  list_node_delete_data(this)
-      class(list_node_type), intent(inout) :: this
+      class(list_node_t), intent(inout) :: this
       if(debug) write(*,*) "delete_data"
       call this % data % delete()
-   end subroutine  list_node_delete_data
+   end subroutine  list_node_delete_data   
+   
+   
+!==================================================================================================================================
 
-end module dl_list_node_module
 
-!-----------------------------------------------------------------------
-!Module dl_list_module
-!-----------------------------------------------------------------------
-module dl_list_module
-   use list_data_module, only : data_type,data_ptr
-   use dl_list_node_module, only : list_node_type, list_node => list_node
-   use list_debug_module
-   implicit none
-   private ! all by default
-   public :: list_type
-
-   type list_type
-      private
-      class(list_node_type), pointer :: head => null()
-      class(list_node_type), pointer :: tail => null()
-      integer :: items_count
-   contains
-      procedure, pass :: print        => list_print_all
-      procedure, pass :: get_first    => list_get_first
-      procedure, pass :: get_last     => list_get_last
-      procedure, pass :: get_at       => list_get_at
-      procedure, pass :: set_at       => list_set_at
-      procedure, pass :: is_empty     => list_is_empty
-      procedure, pass :: get_size     => list_get_size
-      procedure, pass :: add_last     => list_add_last
-      procedure, pass :: add_first    => list_add_first
-      procedure, pass :: add_after    => list_add_after
-      procedure, pass :: add_before   => list_add_before
-      procedure, pass :: delete_last  => list_delete_last
-      procedure, pass :: delete_first => list_delete_first
-      procedure, pass :: delete_at    => list_delete_at
-      procedure, pass :: delete       => list_delete_all
-      procedure, pass, private :: set_size     => list_set_size
-      final           :: delete_list
-   end type list_type
-
-contains
+ 
+!==================================================================================================================================
+! list part
+   
 
    !-----------------------------------------------------------------------
-   !Subroutine delete_list ! deallocate list (deep)
+   !Subroutine list_delete_list ! deallocate list (deep)
    !-----------------------------------------------------------------------
-   subroutine  delete_list(this)
-      type(list_type) :: this
+   subroutine  list_delete_list(this)
+      type(list_t) :: this
       if(debug) write(*,*) "final: delete_list"
       call this % delete()
-   end subroutine  delete_list
+   end subroutine  list_delete_list
 
    !-----------------------------------------------------------------------
    !Subroutine get_first ! access first node
    !-----------------------------------------------------------------------
    function  list_get_first(this) result(get_first)
       implicit none
-      class(list_type), intent(in) :: this
-      class(list_node_type), pointer :: get_first
+      class(list_t), intent(in) :: this
+      class(list_node_t), pointer :: get_first
       if(debug) write(*,*) "get_first"
       get_first => this % head
    end function list_get_first
@@ -338,8 +309,8 @@ contains
    !-----------------------------------------------------------------------
    function  list_get_last(this) result(get_last)
       implicit none
-      class(list_type), intent(in) :: this
-      class(list_node_type), pointer :: get_last
+      class(list_t), intent(in) :: this
+      class(list_node_t), pointer :: get_last
       if(debug) write(*,*) "get_last"
       get_last => this % tail
    end function list_get_last
@@ -349,9 +320,9 @@ contains
    !-----------------------------------------------------------------------
    function  list_get_at(this, nindex) result(get_at)
       implicit none
-      class(list_type), intent(in) :: this
+      class(list_t), intent(in) :: this
       integer, intent(in) :: nindex
-      class(list_node_type), pointer :: get_at
+      class(list_node_t), pointer :: get_at
       integer :: i
       integer :: items_count
 
@@ -398,10 +369,10 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_set_at(this, nindex, data_p)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       integer, intent(in) :: nindex
       type(data_ptr), intent(in) :: data_p
-      class(list_node_type), pointer :: curr
+      class(list_node_t), pointer :: curr
       integer :: items_count
 
       if(debug) write(*,*) "set_at"
@@ -422,9 +393,9 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_print_all(this)
       implicit none
-      class(list_type), intent(in) :: this
+      class(list_t), intent(in) :: this
 
-      class(list_node_type), pointer :: curr
+      class(list_node_t), pointer :: curr
       integer :: items_count, i
       if(debug) write(*,*) "print_all"
 
@@ -457,7 +428,7 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_delete_all(this)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       integer :: items_count, i
       if(debug) write(*,*) "delete_all"
 
@@ -477,7 +448,7 @@ contains
    !-----------------------------------------------------------------------
    function  list_is_empty(this) result(is_empty)
       implicit none
-      class(list_type), intent(in) :: this
+      class(list_t), intent(in) :: this
       logical ::  is_empty
       if(debug) write(*,*) "is_empty"
       if (associated(this % head) .and. associated(this % tail) .and. (this % items_count > 0)) then
@@ -492,7 +463,7 @@ contains
    !-----------------------------------------------------------------------
    function  list_get_size(this) result(get_size)
       implicit none
-      class(list_type), intent(in) :: this
+      class(list_t), intent(in) :: this
       integer :: get_size
       if(debug) write(*,*) "get_size"
       get_size = this % items_count
@@ -503,7 +474,7 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_set_size(this, new_size)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       integer, intent(in) :: new_size
       if(debug) write(*,*) "set_size"
       this % items_count = new_size
@@ -514,11 +485,11 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_add_last(this, data_p)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       type(data_ptr), optional, intent(in) :: data_p
-      class(list_node_type), pointer :: new_node
-      class(list_node_type), pointer :: prev
-      class(list_node_type), pointer :: next
+      class(list_node_t), pointer :: new_node
+      class(list_node_t), pointer :: prev
+      class(list_node_t), pointer :: next
       if(debug) write(*,*) "add_last"
 
       prev => null()
@@ -555,10 +526,10 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_add_first(this, data_p)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       type(data_ptr), optional, intent(in) :: data_p
-      class(list_node_type), pointer :: new_node
-      class(list_node_type), pointer :: curr
+      class(list_node_t), pointer :: new_node
+      class(list_node_t), pointer :: curr
       if(debug) write(*,*) "add_first"
       if (this % is_empty()) then
          if(present(data_p)) then
@@ -589,13 +560,13 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_add_after(this, nindex, data_p)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       integer, intent(in) :: nindex
       type(data_ptr), optional, intent(in) :: data_p
 
-      class(list_node_type), pointer :: new_node
-      class(list_node_type), pointer :: curr
-      class(list_node_type), pointer :: next
+      class(list_node_t), pointer :: new_node
+      class(list_node_t), pointer :: curr
+      class(list_node_t), pointer :: next
       integer :: items_count
       if(debug) write(*,*) "add_after"
 
@@ -636,13 +607,13 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_add_before(this, nindex, data_p)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       integer, intent(in) :: nindex
       type(data_ptr), optional, intent(in) :: data_p
 
-      class(list_node_type), pointer :: new_node
-      class(list_node_type), pointer :: curr
-      class(list_node_type), pointer :: prev
+      class(list_node_t), pointer :: new_node
+      class(list_node_t), pointer :: curr
+      class(list_node_t), pointer :: prev
       integer :: items_count
 
       if(debug) write(*,*) "add_before"
@@ -684,10 +655,10 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_delete_first(this, data_p)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       type(data_ptr), optional, intent(out) :: data_p
-      class(list_node_type), pointer :: curr
-      class(list_node_type), pointer :: next
+      class(list_node_t), pointer :: curr
+      class(list_node_t), pointer :: next
 
       if(debug) write(*,*) "delete_first"
 
@@ -722,10 +693,10 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_delete_last(this, data_p)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       type(data_ptr), optional, intent(out) :: data_p
-      class(list_node_type), pointer :: curr
-      class(list_node_type), pointer :: prev
+      class(list_node_t), pointer :: curr
+      class(list_node_t), pointer :: prev
 
       integer :: items_count
 
@@ -770,12 +741,12 @@ contains
    !-----------------------------------------------------------------------
    subroutine  list_delete_at(this, nindex, data_p)
       implicit none
-      class(list_type), intent(inout) :: this
+      class(list_t), intent(inout) :: this
       integer, intent(in) :: nindex
       type(data_ptr), optional, intent(out) :: data_p
-      class(list_node_type), pointer :: prev
-      class(list_node_type), pointer :: curr
-      class(list_node_type), pointer :: next
+      class(list_node_t), pointer :: prev
+      class(list_node_t), pointer :: curr
+      class(list_node_t), pointer :: next
       integer :: items_count
 
       if(debug) write(*,*) "delete_at"
@@ -823,35 +794,91 @@ contains
       this % items_count = this % items_count -1
    end subroutine list_delete_at
 
-end module dl_list_module
+end module dl_list_m
+
+
+
+
+!-----------------------------------------------------------------------
+!Module data_m
+!user-defined data type extends abstract data type and implements
+! (at least) two methods: delete and print
+!
+!-----------------------------------------------------------------------
+module list_data_m
+   use dl_list_m, only : abstract_data_t
+   implicit none
+   private ! all by default
+   public :: data_t 
+
+
+
+   type, extends(abstract_data_t) :: data_t
+    integer :: x
+    contains
+      procedure, pass :: print => data_t_print
+      procedure, pass :: delete => data_t_delete
+   end type data_t 
+
+
+ contains
+
+   !-----------------------------------------------------------------------
+   !Subroutine
+   !-----------------------------------------------------------------------
+   subroutine  data_t_print(this)
+      implicit none
+      class(data_t), intent(in) :: this
+      write(*,*)"------------------------------------------------------------"
+      write(*,*) "x = ", this % x
+      !  TODO: add other fields here
+      write(*,*)"------------------------------------------------------------"
+   end subroutine data_t_print
+
+   !-----------------------------------------------------------------------
+   !Subroutine
+   !-----------------------------------------------------------------------
+   subroutine  data_t_delete(this)
+      implicit none
+      class(data_t), intent(inout) :: this
+      ! TODO if allocated, deallocate(this)
+   end subroutine data_t_delete
+
+
+end module list_data_m
+
 
 
 !-----------------------------------------------------------------------
 !Main program test_list
 !-----------------------------------------------------------------------
 program    test_list_random
-   use dl_list_module
-   use dl_list_node_module
-   use list_data_module, only : data_type, data_ptr
+   use dl_list_m
+   use list_data_m, only : data_t
+   implicit none
+
+
+   call test_small_list()
+   call test_big_list()
+
+ contains
+
+    !-----------------------------------------------------------------------
+    !Subroutine test_small_list
+    !-----------------------------------------------------------------------
+   subroutine test_small_list ()
    implicit none
    integer, parameter :: n1 = 5
-   integer, parameter :: nbig = 20000
-   type(data_type), dimension(n1+1), target :: data
-   type(data_type), dimension(nbig), target :: data_big
-   type(data_ptr) :: dp
-   type(list_type) :: list
-
-   integer :: random_pos, nsize
-   character(len=1):: dummy
-
-   type(list_node_type), pointer ::  np
    integer :: i
+   type(data_ptr) :: data_p
+   type(list_t) :: list
+   type(data_t), dimension(n1+1), target :: data
+   type(list_node_t), pointer ::  np
    logical :: is_empty
    integer :: lsize
-   real :: random
-   real, dimension(2) :: time
-
-   call init_random_seed()
+   
+   
+      call init_random_seed()
    ! init data
    do i = 1, n1+1
       data(i) % x = i*1.0
@@ -860,8 +887,8 @@ program    test_list_random
    ! create list #1
    write(*,*) "create list #1"
    do i = n1, 1, -1
-      dp % p => data(i)
-      call list % add_first(dp)
+      data_p % p => data(i)
+      call list % add_first(data_p)
    enddo
    write(*,*)"print list #1"
    call list % print()
@@ -880,8 +907,8 @@ program    test_list_random
 
 
    write(*,*)"set_at(3) = 6 list #1"
-   dp % p => data(6)
-   call list % set_at(3,dp)
+   data_p % p => data(6)
+   call list % set_at(3,data_p)
 
 
    np => list % get_at(3)
@@ -896,33 +923,33 @@ program    test_list_random
    write(*,*) is_empty
 
    write(*,*)"set_at(3) = 3 list #1"
-   dp % p => data(3)
-   call list % set_at(3,dp)
-   dp % p => data(6)
+   data_p % p => data(3)
+   call list % set_at(3,data_p)
+   data_p % p => data(6)
    write(*,*)"get_size list #1"
    lsize = list % get_size()
    write(*,*) lsize
 
    write(*,*)"add_last list #1"
-   call list % add_last(dp)
+   call list % add_last(data_p)
 
    write(*,*)"print list #1"
    call list % print()
 
    write(*,*)"add_first list #1"
-   call list % add_first(dp)
+   call list % add_first(data_p)
 
    write(*,*)"print list #1"
    call list % print()
 
    write(*,*)"add_after(2) = 6 list #1"
-   call list % add_after(2, dp)
+   call list % add_after(2, data_p)
 
    write(*,*)"print list #1"
    call list % print()
 
    write(*,*)"add_before(7) = 6 list #1"
-   call list % add_before(7, dp)
+   call list % add_before(7, data_p)
 
    write(*,*)"print list #1"
    call list % print()
@@ -952,76 +979,94 @@ program    test_list_random
 
    write(*,*)"print list #1"
    call list % print()
+   
+   end subroutine test_small_list
 
    !-----------------------------------------------------------------------
-   ! init data_big
-   do i = 1, nbig
-      data_big(i) % x = i*1.0
-   enddo
+    !Subroutine test_big_list
+    !-----------------------------------------------------------------------
+    subroutine  test_big_list()
+    implicit none
+   integer, parameter :: nbig = 20000
+   integer :: i
+   logical :: is_empty
+   integer :: lsize
+   real :: random
+   real, dimension(2) :: time
+   type(list_t) :: list 
+   type(data_ptr) :: data_p
 
-   ! create list #3
-   call cpu_time (time(1))
-   write(*,*)"create big list #2"
-   do i = 1, nbig
-      dp % p => data_big(i)
-      call list % add_last(dp)
-   enddo
-   call cpu_time (time(2))
-   write(*,*) "time = ", time(2)-time(1)
-
-   lsize = list % get_size()
-   ! random access (delete_at) performance
-   write(*,*) "random access (delete_at) performance"
-   call cpu_time (time(1))
-   do while(lsize>0)
-      random_pos = get_random_pos(lsize)
-      call list % delete_at(random_pos)
-      lsize = list % get_size()
-   enddo
-   call cpu_time (time(2))
-   write(*,*) "time = ", time(2)-time(1)
-
-   ! create list #4
-   write(*,*)"create big list #3"
-   call cpu_time (time(1))
-   do i = 1, nbig
-      dp % p => data_big(i)
-      call list % add_last(dp)
-   enddo
-   call cpu_time (time(2))
-   write(*,*) "time = ", time(2)-time(1)
-
-   lsize = list % get_size()
-   ! random access (delete and insert) performance
-   write(*,*) "random access (delete_at + add_before + add_after) performance"
-   call cpu_time (time(1))
-   do i = 1, nbig
-      random_pos = get_random_pos(lsize)
-      call list % delete_at(random_pos)
-      random_pos = get_random_pos(lsize-1)
-      dp % p => data_big(random_pos)
-
-      call random_number(random)
-      if(random < 0.5) then
-         call list % add_before(random_pos,dp)
-      else
-         call list % add_after(random_pos,dp)
-      endif
-   enddo
-   call cpu_time (time(2))
-   write(*,*) "time = ", time(2)-time(1)
-
-   write(*,*) "delete all"
-   call cpu_time (time(1))
-   call list % delete()
-   call cpu_time (time(2))
-   write(*,*) "time = ", time(2)-time(1)
-   write(*,*) "print"
-   call list % print()
+   type(data_t), dimension(nbig), target :: data_big
 
 
+   integer :: random_pos, nsize
+   character(len=1):: dummy
+    ! init data_big
+    do i = 1, nbig
+        data_big(i) % x = i*1.0
+    enddo
 
-contains
+    ! create list #3
+    call cpu_time (time(1))
+    write(*,*)"create big list #2"
+    do i = 1, nbig
+        data_p % p => data_big(i)
+        call list % add_last(data_p)
+    enddo
+    call cpu_time (time(2))
+    write(*,*) "time = ", time(2)-time(1)
+
+    lsize = list % get_size()
+    ! random access (delete_at) performance
+    write(*,*) "random access (delete_at) performance"
+    call cpu_time (time(1))
+    do while(lsize>0)
+        random_pos = get_random_pos(lsize)
+        call list % delete_at(random_pos)
+        lsize = list % get_size()
+    enddo
+    call cpu_time (time(2))
+    write(*,*) "time = ", time(2)-time(1)
+
+    ! create list #4
+    write(*,*)"create big list #3"
+    call cpu_time (time(1))
+    do i = 1, nbig
+        data_p % p => data_big(i)
+        call list % add_last(data_p)
+    enddo
+    call cpu_time (time(2))
+    write(*,*) "time = ", time(2)-time(1)
+
+    lsize = list % get_size()
+    ! random access (delete and insert) performance
+    write(*,*) "random access (delete_at + add_before + add_after) performance"
+    call cpu_time (time(1))
+    do i = 1, nbig
+        random_pos = get_random_pos(lsize)
+        call list % delete_at(random_pos)
+        random_pos = get_random_pos(lsize-1)
+        data_p % p => data_big(random_pos)
+
+        call random_number(random)
+        if(random < 0.5) then
+            call list % add_before(random_pos,data_p)
+        else
+            call list % add_after(random_pos,data_p)
+        endif
+    enddo
+    call cpu_time (time(2))
+    write(*,*) "time = ", time(2)-time(1)
+
+    write(*,*) "delete all"
+    call cpu_time (time(1))
+    call list % delete()
+    call cpu_time (time(2))
+    write(*,*) "time = ", time(2)-time(1)
+    write(*,*) "print"
+    call list % print()
+    end subroutine test_big_list
+
    !-----------------------------------------------------------------------
    ! Subroutine init_random_seed
    ! init the random seed based on the system's time
