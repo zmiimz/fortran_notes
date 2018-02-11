@@ -243,8 +243,9 @@ program    test
 
    type(client_type) :: client
    integer :: i
+   type(refined_abstraction_type) :: a
 
-   call client % create_abstraction(refined_abstraction_type())
+   call client % create_abstraction(a)
 
    do i = 1, 10
       call client % abstraction % init(concrete_implementor_a_type())
