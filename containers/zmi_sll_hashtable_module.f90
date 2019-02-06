@@ -1332,7 +1332,6 @@ contains
       !update stat; depth == 1 - no collision, only one element in the list
       if(depth > 1) then
          this % nc_sum = this % nc_sum + 1
-         !          this % nc_mean = this % nc_sum / real(this % ne, dp) ! BUG
          this % nc_mean = this % nc_sum / real(this % ne_max , dp)
 
       endif
@@ -1384,7 +1383,7 @@ contains
          !update stat, depth > 0 now =>  we removed element counted as collision
          if(depth > 0) then
             this % nc_sum = this % nc_sum - 1
-            this % nc_mean = this % nc_sum / real(this % ne, dp)
+            this % nc_mean = this % nc_sum / real(this % ne_max, dp)
          endif
          this % load_factor = this % ne / real(this % ne_max , dp)
       endif
