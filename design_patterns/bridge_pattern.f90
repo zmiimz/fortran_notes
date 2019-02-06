@@ -9,7 +9,7 @@
 !-----------------------------------------------------------------------
 !This set of modules implements example of bridge design pattern:
 ! -> "decouple an abstraction from its implementation so that the two can vary independently"
-! works with GNU gfortran 7.2.1 (segfault with ifort 18)
+! works with GNU gfortran 7.2.1 and ifort 18
 ! simple implementation of bridge = abstract abstraction_type + abstract implementor_type
 ! using allocatable implementor in the "abstraction" type
 !

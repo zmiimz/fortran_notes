@@ -1,7 +1,7 @@
 # fortran_notes #
 
 Collection of simple and hopefully useful snippets in modern Fortran 2008.
-Tested with gfortran 6.3 and intel ifort 17.0.0
+Tested with gfortran 6.3 and intel ifort 18.0.0
 
 **containers and advanced data structures**
 
